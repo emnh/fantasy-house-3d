@@ -89,7 +89,7 @@ const makeHouse = function(add, brick, wood) {
   }
   const cube = new THREE.Mesh(geometry, brick);
   //container.add(cube);
-  add(cube, true);
+  //add(cube, true);
   container.add(makeRoof(add, wood));
   //container.position.z = 0.5;
   return container;
@@ -193,7 +193,8 @@ const main = function() {
   const { world, updates, add } = setupOimo();
   container.add(makeHouse(add, makeBrickMaterial(), makeWoodMaterial()));
 
-  container.rotation.y = -0.5;
+  //container.position.z = 1;
+  container.rotation.y = 0.5;
 
   const light = new THREE.PointLight(0xffffff, 2, 100, 2);
   light.position.set(camera.position.x, camera.position.y, camera.position.z);
