@@ -17,7 +17,7 @@ const makeTiles = function(add, wood) {
       const zp = y / k;
       tile.position.set(xp, yp, zp);
       const sign = -Math.sign(xp);
-      const r = 0.2;
+      const r = 0.5;
       const f = () => (Math.random() - 0.5) * r;
       tile.rotation.set(f(), f(), sign * Math.PI * (0.25 - 0.1) + f());
       if (xp == 0) {
@@ -26,7 +26,7 @@ const makeTiles = function(add, wood) {
       }
       tiles.push(tile);
       container.add(tile);
-      add(tile, false);
+      add(tile, xp == 0);
     }
   }
   return container;
@@ -48,15 +48,27 @@ const makeRoof = function(add, cube, wood) {
   };
 
   const geometry = new THREE.ExtrudeGeometry(triangleShape, extrudeSettings);
+  const container = new THREE.Object3D();
   const roof = new THREE.Mesh(geometry, wood);
   //roof.position.z = -0.5;
   const sc = 1.0;
+  container.add(roof);
   roof.scale.set(sc, sc, sc);
-  roof.add(makeTiles(add, wood));
-  roof.position.y += 1.0;
-  add(roof);
+  //roof.position.y += 1.0;
+  container.add(makeTiles(add, wood));
 
-  return roof;
+  const roofGeo = new THREE.BoxGeometry();
+  const roofSim = new THREE.Mesh(roofGeo, wood);
+  container.add(roofSim);
+  const rsc = 1 / Math.sqrt(2);
+  roofSim.scale.set(rsc, rsc, sc * 1.1);
+  roofSim.position.y = 0.5;
+  roofSim.position.z = 0.5;
+  roofSim.rotation.z = Math.PI * 0.25;
+  roofSim.visible = false;
+  add(roofSim, true);
+
+  return container;
 };
 
 const makeHouse = function(add, brick, wood) {
@@ -64,8 +76,8 @@ const makeHouse = function(add, brick, wood) {
   const container = new THREE.Object3D();
   const cube = new THREE.Mesh(geometry, brick);
   container.add(cube);
-  cube.position.z = 0.5;
   container.add(makeRoof(add, cube, wood));
+  container.position.z = 0.5;
   add(cube, true);
   return container;
 };
@@ -102,12 +114,18 @@ const setupOimo = function() {
   const updates = [];
 
   const add = function(obj, static) {
-    const ws = obj.getWorldScale();
+    const wsv = new THREE.Vector3();
+    const ws = obj.getWorldScale(wsv);
     const size = [ws.x, ws.y, ws.z];
-    const wp = obj.getWorldPosition();
+    const wpv = new THREE.Vector3();
+    const wp = obj.getWorldPosition(wpv);
     const pos = [wp.x, wp.y, wp.z];
-    const deg = x => (Math.PI * x) / 180.0;
-    const wr = obj.getWorldDirection();
+    const deg = x => (180.0 * x) / Math.PI;
+    //const deg = x => (Math.PI * x) / 180.0;
+    //const deg = x => x;
+    const wrv = new THREE.Vector3();
+    //const wr = obj.getWorldDirection(wrv);
+    const wr = obj.rotation;
     const rot = [deg(wr.x), deg(wr.y), deg(wr.z)];
     if (static === undefined) {
       static = false;
@@ -119,13 +137,16 @@ const setupOimo = function() {
       rot: rot, // start rotation in degree
       move: !static, // dynamic or statique
       density: 1,
-      friction: 0.2,
+      friction: 5.0,
       restitution: 0.2,
       belongsTo: 1, // The bits of the collision groups to which the shape belongs.
       collidesWith: 0xffffffff // The bits of the collision groups with which the shape collides.
     });
 
     const sync = function() {
+      // const bp = body.getPosition();
+      // const pos = new THREE.Vector3(bp);
+      // obj.position.copy(obj.worldToLocal(pos));
       obj.position.copy(body.getPosition());
       obj.quaternion.copy(body.getQuaternion());
     };
@@ -157,7 +178,7 @@ const main = function() {
   const { world, updates, add } = setupOimo();
   container.add(makeHouse(add, makeBrickMaterial(), makeWoodMaterial()));
 
-  //container.rotation.y = -0.5;
+  container.rotation.y = -0.5;
 
   const light = new THREE.PointLight(0xffffff, 2, 100, 2);
   light.position.set(camera.position.x, camera.position.y, camera.position.z);
